@@ -4,8 +4,8 @@ import yaml
 from microdrop_utility import Version
 from path_helpers import path
 
-package_name = 'microdrop_plugin_template'
-plugin_name = 'wheelerlab.microdrop_plugin_template'
+package_name = 'dmf_device_ui_plugin'
+plugin_name = 'wheelerlab.dmf_device_ui_plugin'
 
 # create a version sting based on the git revision/branch
 version = str(Version.from_git_repository())

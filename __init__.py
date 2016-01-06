@@ -1,9 +1,9 @@
 """
 Copyright 2015 Christian Fobel
 
-This file is part of microdrop_plugin_template.
+This file is part of dmf_device_ui_plugin.
 
-microdrop_plugin_template is free software: you can redistribute it and/or modify
+dmf_device_ui_plugin is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
 (at your option) any later version.
@@ -14,7 +14,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with microdrop_plugin_template.  If not, see <http://www.gnu.org/licenses/>.
+along with dmf_device_ui_plugin.  If not, see <http://www.gnu.org/licenses/>.
 """
 import sys, traceback
 from datetime import datetime
@@ -32,7 +32,7 @@ import gobject
 
 PluginGlobals.push_env('microdrop.managed')
 
-class MicrodropPluginTemplate(Plugin, AppDataController, StepOptionsController):
+class DmfDeviceUiPlugin(Plugin, AppDataController, StepOptionsController):
     """
     This class is automatically registered with the PluginManager.
     """
@@ -105,7 +105,7 @@ class MicrodropPluginTemplate(Plugin, AppDataController, StepOptionsController):
             or 'Fail' - unrecoverable error (stop the protocol)
         """
         app = get_app()
-        logger.info('[MicrodropPluginTemplate] on_step_run(): step #%d',
+        logger.info('[DmfDeviceUiPlugin] on_step_run(): step #%d',
                     app.protocol.current_step_number)
         app_values = self.get_app_values()
         try:

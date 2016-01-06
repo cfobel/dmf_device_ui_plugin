@@ -65,4 +65,4 @@ def parse_args(args=None):
 
 if __name__ == '__main__':
     args = parse_args()
-    main('.', 'microdrop-plugin-template', args.new_name)
+    main('.', 'dmf-device-ui-plugin', args.new_name)
