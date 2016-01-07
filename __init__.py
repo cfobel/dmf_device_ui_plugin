@@ -43,8 +43,8 @@ class DmfDeviceUiPlugin(Plugin):
     def on_plugin_enable(self):
         py_exe = sys.executable
         self.gui_process = Popen([py_exe, '-m',
-                                  'dmv_device_ui.bin.device_view', 'fixed',
-                                  get_hub_uri(), '-n', self.name])
+                                  'dmf_device_ui.bin.device_view', '-n',
+                                  self.name, 'fixed', get_hub_uri()])
         self.gui_process.daemon = False
 
     def on_plugin_disable(self):
