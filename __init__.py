@@ -24,6 +24,7 @@ from microdrop.plugin_helpers import get_plugin_info
 from microdrop.plugin_manager import (PluginGlobals, Plugin, IPlugin,
                                       implements)
 from microdrop.app_context import get_hub_uri
+import gobject
 
 
 PluginGlobals.push_env('microdrop.managed')
@@ -39,15 +40,44 @@ class DmfDeviceUiPlugin(Plugin):
     def __init__(self):
         self.name = self.plugin_name
         self.gui_process = None
+        self.gui_heartbeat_id = None
+        self._gui_enabled = False
 
     def on_plugin_enable(self):
+        self.reset_gui()
+
+    def reset_gui(self):
         py_exe = sys.executable
         self.gui_process = Popen([py_exe, '-m',
                                   'dmf_device_ui.bin.device_view', '-n',
                                   self.name, 'fixed', get_hub_uri()])
         self.gui_process.daemon = False
+        self._gui_enabled = True
+
+        def keep_alive():
+            if not self._gui_enabled:
+                return False
+            elif self.gui_process.poll() == 0:
+                # GUI process has exited.  Restart.
+                self.cleanup()
+                self.reset_gui()
+                return False
+            else:
+                # Keep checking.
+                return True
+        self.gui_heartbeat_id = gobject.timeout_add(200, keep_alive)
 
     def on_plugin_disable(self):
+        self._gui_enabled = False
+        self.cleanup()
+
+    def on_app_exit(self):
+        self._gui_enabled = False
+        self.cleanup()
+
+    def cleanup(self):
+        if self.gui_heartbeat_id is not None:
+            gobject.source_remove(self.gui_heartbeat_id)
         if self.gui_process is not None:
             self.gui_process.terminate()
 
