@@ -25,7 +25,8 @@ from flatland import Integer, Form
 from path_helpers import path
 from microdrop.plugin_helpers import AppDataController, get_plugin_info
 from microdrop.plugin_manager import (PluginGlobals, Plugin, IPlugin,
-                                      implements, get_service_instance_by_name)
+                                      implements, get_service_instance_by_name,
+                                      ScheduleRequest)
 from microdrop.app_context import get_hub_uri
 import gobject
 import gtk
@@ -42,6 +43,7 @@ def hub_execute(*args, **kwargs):
 def gtk_wait(wait_duration_s): gtk.main_iteration_do()
 
 PluginGlobals.push_env('microdrop.managed')
+
 
 class DmfDeviceUiPlugin(AppDataController, Plugin):
     """
@@ -127,5 +129,16 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
             gobject.source_remove(self.gui_heartbeat_id)
         if self.gui_process is not None:
             self.gui_process.terminate()
+
+    def get_schedule_requests(self, function_name):
+        """
+        Returns a list of scheduling requests (i.e., ScheduleRequest
+        instances) for the function specified by function_name.
+        """
+        if function_name == 'on_plugin_enable':
+            return [ScheduleRequest('wheelerlab.droplet_planning_plugin',
+                                    self.name)]
+        return []
+
 
 PluginGlobals.pop_env()
