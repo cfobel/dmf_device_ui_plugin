@@ -1,1 +1,2 @@
-analyst-remote-control
+dmf-device-ui>=0.2.post22
+pyyaml
