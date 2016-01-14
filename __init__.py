@@ -100,7 +100,6 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
         self.gui_heartbeat_id = gobject.timeout_add(1000, keep_alive)
 
     def on_plugin_disable(self):
-        super(DmfDeviceUiPlugin, self).on_plugin_disable()
         self._gui_enabled = False
         self.cleanup()
 
