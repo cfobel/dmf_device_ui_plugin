@@ -18,8 +18,10 @@ along with dmf_device_ui_plugin.  If not, see <http://www.gnu.org/licenses/>.
 """
 import json
 import logging
+import platform
+import signal
 import sys
-from subprocess import Popen
+from subprocess import Popen, CREATE_NEW_PROCESS_GROUP
 
 from flatland import Integer, Form
 from microdrop.plugin_helpers import AppDataController, get_plugin_info
@@ -80,7 +82,8 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
         self.gui_process = Popen([py_exe, '-m',
                                   'dmf_device_ui.bin.device_view', '-n',
                                   self.name] + allocation_args +
-                                 ['fixed', get_hub_uri()])
+                                 ['fixed', get_hub_uri()],
+                                 creationflags=CREATE_NEW_PROCESS_GROUP)
         self.gui_process.daemon = False
         self._gui_enabled = True
 
@@ -126,7 +129,10 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
         if self.gui_heartbeat_id is not None:
             gobject.source_remove(self.gui_heartbeat_id)
         if self.gui_process is not None:
-            self.gui_process.terminate()
+            if platform.system() == 'Windows':
+                self.gui_process.send_signal(signal.CTRL_BREAK_EVENT)
+            else:
+                self.gui_process.kill()
 
     def get_schedule_requests(self, function_name):
         """
