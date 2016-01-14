@@ -22,14 +22,14 @@ import sys
 from subprocess import Popen
 
 from flatland import Integer, Form
-from path_helpers import path
 from microdrop.plugin_helpers import AppDataController, get_plugin_info
 from microdrop.plugin_manager import (PluginGlobals, Plugin, IPlugin,
                                       implements, get_service_instance_by_name,
                                       ScheduleRequest)
 from microdrop.app_context import get_hub_uri
+from path_helpers import path
+from pygtkhelpers.utils import refresh_gui
 import gobject
-import gtk
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +39,6 @@ def hub_execute(*args, **kwargs):
                                             env='microdrop')
     return service.plugin.execute(*args, **kwargs)
 
-
-def gtk_wait(wait_duration_s): gtk.main_iteration_do()
 
 PluginGlobals.push_env('microdrop.managed')
 
@@ -108,7 +106,8 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
             # Try to request allocation to save in app options.
             try:
                 allocation = hub_execute(self.name, 'get_allocation',
-                                         wait_func=gtk_wait, timeout_s=2)
+                                         wait_func=lambda *args: refresh_gui(),
+                                         timeout_s=2)
             except IOError:
                 logger.warning('Timed out waiting for device window size and '
                                'position request.')
