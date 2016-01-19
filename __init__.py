@@ -18,8 +18,6 @@ along with dmf_device_ui_plugin.  If not, see <http://www.gnu.org/licenses/>.
 """
 import json
 import logging
-import platform
-import signal
 import sys
 from subprocess import Popen, CREATE_NEW_PROCESS_GROUP
 
@@ -34,6 +32,12 @@ from pygtkhelpers.utils import refresh_gui
 import gobject
 
 logger = logging.getLogger(__name__)
+
+
+def hub_execute_async(*args, **kwargs):
+    service = get_service_instance_by_name('wheelerlab.device_info_plugin',
+                                            env='microdrop')
+    return service.plugin.execute_async(*args, **kwargs)
 
 
 def hub_execute(*args, **kwargs):
@@ -129,10 +133,7 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
         if self.gui_heartbeat_id is not None:
             gobject.source_remove(self.gui_heartbeat_id)
         if self.gui_process is not None:
-            if platform.system() == 'Windows':
-                self.gui_process.send_signal(signal.CTRL_BREAK_EVENT)
-            else:
-                self.gui_process.kill()
+            hub_execute_async(self.name, 'terminate')
 
     def get_schedule_requests(self, function_name):
         """
