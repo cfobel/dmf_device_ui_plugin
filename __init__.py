@@ -16,34 +16,27 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with dmf_device_ui_plugin.  If not, see <http://www.gnu.org/licenses/>.
 """
+from datetime import datetime
+from subprocess import Popen, CREATE_NEW_PROCESS_GROUP
+import io
 import json
 import logging
 import sys
-from subprocess import Popen, CREATE_NEW_PROCESS_GROUP
+import time
 
-from flatland import Integer, Form
-from microdrop.plugin_helpers import AppDataController, get_plugin_info
+from flatland import Integer, Form, String
+from microdrop.plugin_helpers import (AppDataController, get_plugin_info,
+                                      hub_execute, hub_execute_async)
 from microdrop.plugin_manager import (PluginGlobals, Plugin, IPlugin,
-                                      implements, get_service_instance_by_name,
-                                      ScheduleRequest)
+                                      implements, ScheduleRequest)
 from microdrop.app_context import get_hub_uri
 from path_helpers import path
 from pygtkhelpers.utils import refresh_gui
+from si_prefix import si_format
 import gobject
+import pandas as pd
 
 logger = logging.getLogger(__name__)
-
-
-def hub_execute_async(*args, **kwargs):
-    service = get_service_instance_by_name('wheelerlab.device_info_plugin',
-                                            env='microdrop')
-    return service.plugin.execute_async(*args, **kwargs)
-
-
-def hub_execute(*args, **kwargs):
-    service = get_service_instance_by_name('wheelerlab.device_info_plugin',
-                                            env='microdrop')
-    return service.plugin.execute(*args, **kwargs)
 
 
 PluginGlobals.push_env('microdrop.managed')
@@ -58,6 +51,11 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
     plugin_name = get_plugin_info(path(__file__).parent).plugin_name
 
     AppFields = Form.of(
+        String.named('canvas_corners').using(default='', optional=True,
+                                             properties={'show_in_gui':
+                                                         False}),
+        String.named('frame_corners').using(default='', optional=True,
+                                            properties={'show_in_gui': False}),
         Integer.named('x').using(default=None, optional=True,
                                  properties={'show_in_gui': False}),
         Integer.named('y').using(default=None, optional=True,
@@ -72,6 +70,7 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
         self.gui_process = None
         self.gui_heartbeat_id = None
         self._gui_enabled = False
+        self.alive_timestamp = None
 
     def on_plugin_enable(self):
         super(DmfDeviceUiPlugin, self).on_plugin_enable()
@@ -81,8 +80,8 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
         py_exe = sys.executable
         # Set allocation based on saved app values (i.e., remember window size
         # and position from last run).
-        allocation = self.get_app_values()
-        allocation_args = ['-a', json.dumps(allocation)]
+        app_values = self.get_app_values()
+        allocation_args = ['-a', json.dumps(app_values)]
         self.gui_process = Popen([py_exe, '-m',
                                   'dmf_device_ui.bin.device_view', '-n',
                                   self.name] + allocation_args +
@@ -93,6 +92,7 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
 
         def keep_alive():
             if not self._gui_enabled:
+                self.alive_timestamp = None
                 return False
             elif self.gui_process.poll() == 0:
                 # GUI process has exited.  Restart.
@@ -100,8 +100,12 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
                 self.reset_gui()
                 return False
             else:
+                self.alive_timestamp = datetime.now()
                 # Keep checking.
                 return True
+        # Go back to Undo 613 for working corners
+        self.wait_for_gui_process()
+        self.set_default_corners()
         self.gui_heartbeat_id = gobject.timeout_add(1000, keep_alive)
 
     def on_plugin_disable(self):
@@ -112,18 +116,22 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
         if self.gui_process is not None:
             # Try to request allocation to save in app options.
             try:
-                allocation = hub_execute(self.name, 'get_allocation',
-                                         wait_func=lambda *args: refresh_gui(),
-                                         timeout_s=2)
+                data = hub_execute(self.name, 'get_corners', wait_func=lambda
+                                   *args: refresh_gui(), timeout_s=2)
             except IOError:
                 logger.warning('Timed out waiting for device window size and '
                                'position request.')
             else:
-                if allocation:
+                if data:
                     # Save window allocation settings (i.e., width, height, x,
                     # y) as app values.
                     app_values = self.get_app_values()
-                    app_values.update(allocation)
+                    # Replace `df_..._corners` with CSV string with name
+                    # `..._corners` (no `df_` prefix).
+                    for k in ('df_canvas_corners', 'df_frame_corners'):
+                        if k in data:
+                            data['allocation'][k[3:]] = data.pop(k).to_csv()
+                    app_values.update(data['allocation'])
                     self.set_app_values(app_values)
 
         self._gui_enabled = False
@@ -134,6 +142,7 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
             gobject.source_remove(self.gui_heartbeat_id)
         if self.gui_process is not None:
             hub_execute_async(self.name, 'terminate')
+        self.alive_timestamp = None
 
     def get_schedule_requests(self, function_name):
         """
@@ -144,6 +153,50 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
             return [ScheduleRequest('wheelerlab.droplet_planning_plugin',
                                     self.name)]
         return []
+
+    def set_default_corners(self):
+        if self.alive_timestamp is None or self.gui_process is None:
+            # Repeat until GUI process has started.
+            raise IOError('GUI process not ready.')
+
+        app_values = self.get_app_values()
+        canvas_corners = app_values.get('canvas_corners', None)
+        frame_corners = app_values.get('frame_corners', None)
+        logger.info('[_set_default_corners] canvas_corners=%s', canvas_corners)
+        logger.info('[_set_default_corners] frame_corners=%s', frame_corners)
+
+        if not canvas_corners or not frame_corners:
+            return
+
+        df_canvas_corners = pd.read_csv(io.BytesIO(bytes(canvas_corners)),
+                                        index_col=0)
+        df_frame_corners = pd.read_csv(io.BytesIO(bytes(frame_corners)),
+                                        index_col=0)
+
+        hub_execute(self.name, 'set_default_corners',
+                    canvas=df_canvas_corners, frame=df_frame_corners,
+                    wait_func=lambda *args: refresh_gui(), timeout_s=5)
+
+    def wait_for_gui_process(self, retry_count=10, retry_duration_s=1):
+        start = datetime.now()
+        for i in xrange(retry_count):
+            try:
+                hub_execute(self.name, 'ping', wait_func=lambda *args:
+                            refresh_gui(), timeout_s=5)
+            except:
+                logger.debug('[_set_default_corners] failed (%d of %d)', i + 1,
+                             retry_count, exc_info=True)
+            else:
+                logger.info('[_set_default_corners] success (%d of %d)', i + 1,
+                            retry_count)
+                self.alive_timestamp = datetime.now()
+                return
+            for j in xrange(10):
+                time.sleep(retry_duration_s / 10.)
+                refresh_gui()
+        raise IOError('Timed out after %ss waiting for GUI process to connect '
+                      'to hub.' % si_format((datetime.now() -
+                                             start).total_seconds()))
 
 
 PluginGlobals.pop_env()
