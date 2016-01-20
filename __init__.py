@@ -29,7 +29,7 @@ from microdrop.plugin_helpers import (AppDataController, get_plugin_info,
                                       hub_execute, hub_execute_async)
 from microdrop.plugin_manager import (PluginGlobals, Plugin, IPlugin,
                                       implements, ScheduleRequest)
-from microdrop.app_context import get_hub_uri
+from microdrop.app_context import get_app, get_hub_uri
 from path_helpers import path
 from pygtkhelpers.utils import refresh_gui
 from si_prefix import si_format
@@ -51,6 +51,8 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
     plugin_name = get_plugin_info(path(__file__).parent).plugin_name
 
     AppFields = Form.of(
+        String.named('video_config').using(default='', optional=True,
+                                           properties={'show_in_gui': False}),
         String.named('canvas_corners').using(default='', optional=True,
                                              properties={'show_in_gui':
                                                          False}),
@@ -82,9 +84,16 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
         # and position from last run).
         app_values = self.get_app_values()
         allocation_args = ['-a', json.dumps(app_values)]
+
+        app = get_app()
+        if app.config.data.get('advanced_ui', False):
+            debug_args = ['-d']
+        else:
+            debug_args = []
+
         self.gui_process = Popen([py_exe, '-m',
                                   'dmf_device_ui.bin.device_view', '-n',
-                                  self.name] + allocation_args +
+                                  self.name] + allocation_args + debug_args +
                                  ['fixed', get_hub_uri()],
                                  creationflags=CREATE_NEW_PROCESS_GROUP)
         self.gui_process.daemon = False
@@ -106,6 +115,7 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
         # Go back to Undo 613 for working corners
         self.wait_for_gui_process()
         self.set_default_corners()
+        self.set_video_config()
         self.gui_heartbeat_id = gobject.timeout_add(1000, keep_alive)
 
     def on_plugin_disable(self):
@@ -114,6 +124,21 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
 
     def on_app_exit(self):
         if self.gui_process is not None:
+            app_values = self.get_app_values()
+            original_values = app_values.copy()
+
+            # Try to request video configuration.
+            try:
+                video_config = hub_execute(self.name, 'get_video_config',
+                                           wait_func=lambda *args:
+                                           refresh_gui(), timeout_s=2)
+            except IOError:
+                logger.warning('Timed out waiting for device window size and '
+                               'position request.')
+            else:
+                if video_config is not None:
+                    app_values['video_config'] = video_config.to_json()
+
             # Try to request allocation to save in app options.
             try:
                 data = hub_execute(self.name, 'get_corners', wait_func=lambda
@@ -125,14 +150,15 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
                 if data:
                     # Save window allocation settings (i.e., width, height, x,
                     # y) as app values.
-                    app_values = self.get_app_values()
                     # Replace `df_..._corners` with CSV string with name
                     # `..._corners` (no `df_` prefix).
                     for k in ('df_canvas_corners', 'df_frame_corners'):
                         if k in data:
                             data['allocation'][k[3:]] = data.pop(k).to_csv()
                     app_values.update(data['allocation'])
-                    self.set_app_values(app_values)
+
+            if app_values != original_values:
+                self.set_app_values(app_values)
 
         self._gui_enabled = False
         self.cleanup()
@@ -177,6 +203,22 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
                     canvas=df_canvas_corners, frame=df_frame_corners,
                     wait_func=lambda *args: refresh_gui(), timeout_s=5)
 
+    def set_video_config(self):
+        if self.alive_timestamp is None or self.gui_process is None:
+            # Repeat until GUI process has started.
+            raise IOError('GUI process not ready.')
+
+        app_values = self.get_app_values()
+        video_config_json = app_values.get('video_config')
+
+        if not video_config_json:
+            return
+
+        video_config = pd.Series(json.loads(video_config_json))
+
+        hub_execute(self.name, 'set_video_config', video_config=video_config,
+                    wait_func=lambda *args: refresh_gui(), timeout_s=5)
+
     def wait_for_gui_process(self, retry_count=10, retry_duration_s=1):
         start = datetime.now()
         for i in xrange(retry_count):
@@ -184,10 +226,10 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
                 hub_execute(self.name, 'ping', wait_func=lambda *args:
                             refresh_gui(), timeout_s=5)
             except:
-                logger.debug('[_set_default_corners] failed (%d of %d)', i + 1,
+                logger.debug('[wait_for_gui_process] failed (%d of %d)', i + 1,
                              retry_count, exc_info=True)
             else:
-                logger.info('[_set_default_corners] success (%d of %d)', i + 1,
+                logger.info('[wait_for_gui_process] success (%d of %d)', i + 1,
                             retry_count)
                 self.alive_timestamp = datetime.now()
                 return
