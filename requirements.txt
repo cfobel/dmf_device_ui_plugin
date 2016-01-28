@@ -1,2 +1,3 @@
 dmf-device-ui>=0.2.post48
 pyyaml
+zmq-plugin>=0.2

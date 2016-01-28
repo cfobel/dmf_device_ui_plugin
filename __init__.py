@@ -224,7 +224,7 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
         for i in xrange(retry_count):
             try:
                 hub_execute(self.name, 'ping', wait_func=lambda *args:
-                            refresh_gui(), timeout_s=5)
+                            refresh_gui(), timeout_s=5, silent=True)
             except:
                 logger.debug('[wait_for_gui_process] failed (%d of %d)', i + 1,
                              retry_count, exc_info=True)
