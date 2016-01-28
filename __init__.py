@@ -172,7 +172,7 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
                 logger.warning('Timed out waiting for surface alphas.')
             else:
                 if surface_alphas is not None:
-                    app_values['surface_alphas'] = json.dumps(surface_alphas)
+                    app_values['surface_alphas'] = surface_alphas.to_json()
                 else:
                     app_values['surface_alphas'] = ''
                 logger.info('surface_alphas %s', app_values['surface_alphas'])
@@ -249,7 +249,7 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
 
         if not surface_alphas_json:
             return
-        surface_alphas = json.loads(surface_alphas_json)
+        surface_alphas = pd.Series(json.loads(surface_alphas_json))
 
         hub_execute(self.name, 'set_surface_alphas',
                     surface_alphas=surface_alphas,
