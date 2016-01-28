@@ -138,6 +138,8 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
             else:
                 if video_config is not None:
                     app_values['video_config'] = video_config.to_json()
+                else:
+                    app_values['video_config'] = ''
 
             # Try to request allocation to save in app options.
             try:
@@ -212,9 +214,9 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
         video_config_json = app_values.get('video_config')
 
         if not video_config_json:
-            return
-
-        video_config = pd.Series(json.loads(video_config_json))
+            video_config = pd.Series(None)
+        else:
+            video_config = pd.Series(json.loads(video_config_json))
 
         hub_execute(self.name, 'set_video_config', video_config=video_config,
                     wait_func=lambda *args: refresh_gui(), timeout_s=5)
