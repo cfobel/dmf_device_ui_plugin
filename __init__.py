@@ -53,6 +53,9 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
     AppFields = Form.of(
         String.named('video_config').using(default='', optional=True,
                                            properties={'show_in_gui': False}),
+        String.named('surface_alphas').using(default='', optional=True,
+                                             properties={'show_in_gui':
+                                                         False}),
         String.named('canvas_corners').using(default='', optional=True,
                                              properties={'show_in_gui':
                                                          False}),
@@ -116,6 +119,7 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
         self.wait_for_gui_process()
         self.set_default_corners()
         self.set_video_config()
+        self.set_surface_alphas()
         self.gui_heartbeat_id = gobject.timeout_add(1000, keep_alive)
 
     def on_plugin_disable(self):
@@ -158,6 +162,20 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
                         if k in data:
                             data['allocation'][k[3:]] = data.pop(k).to_csv()
                     app_values.update(data['allocation'])
+
+            # Try to request surface alphas.
+            try:
+                surface_alphas = hub_execute(self.name, 'get_surface_alphas',
+                                             wait_func=lambda *args:
+                                             refresh_gui(), timeout_s=2)
+            except IOError:
+                logger.warning('Timed out waiting for surface alphas.')
+            else:
+                if surface_alphas is not None:
+                    app_values['surface_alphas'] = json.dumps(surface_alphas)
+                else:
+                    app_values['surface_alphas'] = ''
+                logger.info('surface_alphas %s', app_values['surface_alphas'])
 
             if app_values != original_values:
                 self.set_app_values(app_values)
@@ -219,6 +237,22 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
             video_config = pd.Series(json.loads(video_config_json))
 
         hub_execute(self.name, 'set_video_config', video_config=video_config,
+                    wait_func=lambda *args: refresh_gui(), timeout_s=5)
+
+    def set_surface_alphas(self):
+        if self.alive_timestamp is None or self.gui_process is None:
+            # Repeat until GUI process has started.
+            raise IOError('GUI process not ready.')
+
+        app_values = self.get_app_values()
+        surface_alphas_json = app_values.get('surface_alphas')
+
+        if not surface_alphas_json:
+            return
+        surface_alphas = json.loads(surface_alphas_json)
+
+        hub_execute(self.name, 'set_surface_alphas',
+                    surface_alphas=surface_alphas,
                     wait_func=lambda *args: refresh_gui(), timeout_s=5)
 
     def wait_for_gui_process(self, retry_count=10, retry_duration_s=1):
