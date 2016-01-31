@@ -10,4 +10,8 @@ if __name__ == '__main__':
     logging.info(str(datetime.now()))
     requirements_file = path(__file__).parent.joinpath('requirements.txt')
     if requirements_file.exists():
-        logging.info(install(['-r', requirements_file]))
+        # Install required packages using `pip`, with Wheeler Lab wheels server
+        # for binary wheels not available on `PyPi`.
+        logging.info(install(['--find-links http://192.99.4.95',
+                              '--trusted-host 192.99.4.95', '-r',
+                              requirements_file]))
