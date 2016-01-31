@@ -12,6 +12,6 @@ if __name__ == '__main__':
     if requirements_file.exists():
         # Install required packages using `pip`, with Wheeler Lab wheels server
         # for binary wheels not available on `PyPi`.
-        logging.info(install(['--find-links http://192.99.4.95',
-                              '--trusted-host 192.99.4.95', '-r',
-                              requirements_file]))
+	logging.info(install(['--find-links', 'http://192.99.4.95/wheels',
+                              '--trusted-host', '192.99.4.95', '-r',
+                              requirements_file])
