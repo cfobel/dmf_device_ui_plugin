@@ -1,2 +1,2 @@
-dmf-device-ui>=0.2.post85
+dmf-device-ui>=0.2.post92
 pyyaml

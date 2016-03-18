@@ -1,5 +1,5 @@
 """
-Copyright 2015 Christian Fobel
+Copyright 2015-2016 Christian Fobel
 
 This file is part of dmf_device_ui_plugin.
 
@@ -24,11 +24,12 @@ import logging
 import sys
 import time
 
-from flatland import Integer, Form, String
-from microdrop.plugin_helpers import (AppDataController, get_plugin_info,
-                                      hub_execute, hub_execute_async)
-from microdrop.plugin_manager import (PluginGlobals, Plugin, IPlugin,
-                                      implements, ScheduleRequest)
+from flatland import Boolean, Form, Integer, String
+from microdrop.plugin_helpers import (AppDataController, StepOptionsController,
+                                      get_plugin_info, hub_execute,
+                                      hub_execute_async)
+from microdrop.plugin_manager import (IPlugin, Plugin, PluginGlobals,
+                                      ScheduleRequest, emit_signal, implements)
 from microdrop.app_context import get_app, get_hub_uri
 from path_helpers import path
 from pygtkhelpers.utils import refresh_gui
@@ -42,7 +43,7 @@ logger = logging.getLogger(__name__)
 PluginGlobals.push_env('microdrop.managed')
 
 
-class DmfDeviceUiPlugin(AppDataController, Plugin):
+class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
     """
     This class is automatically registered with the PluginManager.
     """
@@ -70,16 +71,16 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
         Integer.named('height').using(default=500, optional=True,
                                       properties={'show_in_gui': False}))
 
+    StepFields = Form.of(Boolean.named('video_enabled')
+                         .using(default=True, optional=True,
+                                properties={'title': 'Video'}))
+
     def __init__(self):
         self.name = self.plugin_name
         self.gui_process = None
         self.gui_heartbeat_id = None
         self._gui_enabled = False
         self.alive_timestamp = None
-
-    def on_plugin_enable(self):
-        super(DmfDeviceUiPlugin, self).on_plugin_enable()
-        self.reset_gui()
 
     def reset_gui(self):
         py_exe = sys.executable
@@ -116,72 +117,14 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
                 # Keep checking.
                 return True
         # Go back to Undo 613 for working corners
+        self.step_video_settings = None
         self.wait_for_gui_process()
-        self.set_default_corners()
-        self.set_video_config()
-        self.set_surface_alphas()
+        # Get current video settings from UI.
+        app_values = self.get_app_values()
+        # Convert JSON settings to 0MQ plugin API Python types.
+        ui_settings = self.json_settings_as_python(app_values)
+        self.set_ui_settings(ui_settings, default_corners=True)
         self.gui_heartbeat_id = gobject.timeout_add(1000, keep_alive)
-
-    def on_plugin_disable(self):
-        self._gui_enabled = False
-        self.cleanup()
-
-    def on_app_exit(self):
-        if self.gui_process is not None:
-            app_values = self.get_app_values()
-            original_values = app_values.copy()
-
-            # Try to request video configuration.
-            try:
-                video_config = hub_execute(self.name, 'get_video_config',
-                                           wait_func=lambda *args:
-                                           refresh_gui(), timeout_s=2)
-            except IOError:
-                logger.warning('Timed out waiting for device window size and '
-                               'position request.')
-            else:
-                if video_config is not None:
-                    app_values['video_config'] = video_config.to_json()
-                else:
-                    app_values['video_config'] = ''
-
-            # Try to request allocation to save in app options.
-            try:
-                data = hub_execute(self.name, 'get_corners', wait_func=lambda
-                                   *args: refresh_gui(), timeout_s=2)
-            except IOError:
-                logger.warning('Timed out waiting for device window size and '
-                               'position request.')
-            else:
-                if data:
-                    # Save window allocation settings (i.e., width, height, x,
-                    # y) as app values.
-                    # Replace `df_..._corners` with CSV string with name
-                    # `..._corners` (no `df_` prefix).
-                    for k in ('df_canvas_corners', 'df_frame_corners'):
-                        if k in data:
-                            data['allocation'][k[3:]] = data.pop(k).to_csv()
-                    app_values.update(data['allocation'])
-
-            # Try to request surface alphas.
-            try:
-                surface_alphas = hub_execute(self.name, 'get_surface_alphas',
-                                             wait_func=lambda *args:
-                                             refresh_gui(), timeout_s=2)
-            except IOError:
-                logger.warning('Timed out waiting for surface alphas.')
-            else:
-                if surface_alphas is not None:
-                    app_values['surface_alphas'] = surface_alphas.to_json()
-                else:
-                    app_values['surface_alphas'] = ''
-                logger.info('surface_alphas %s', app_values['surface_alphas'])
-
-            if app_values != original_values:
-                self.set_app_values(app_values)
-
-        self._gui_enabled = False
-        self.cleanup()
 
     def cleanup(self):
         if self.gui_heartbeat_id is not None:
@@ -189,71 +132,6 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
         if self.gui_process is not None:
             hub_execute_async(self.name, 'terminate')
         self.alive_timestamp = None
-
-    def get_schedule_requests(self, function_name):
-        """
-        Returns a list of scheduling requests (i.e., ScheduleRequest
-        instances) for the function specified by function_name.
-        """
-        if function_name == 'on_plugin_enable':
-            return [ScheduleRequest('wheelerlab.droplet_planning_plugin',
-                                    self.name)]
-        return []
-
-    def set_default_corners(self):
-        if self.alive_timestamp is None or self.gui_process is None:
-            # Repeat until GUI process has started.
-            raise IOError('GUI process not ready.')
-
-        app_values = self.get_app_values()
-        canvas_corners = app_values.get('canvas_corners', None)
-        frame_corners = app_values.get('frame_corners', None)
-        logger.info('[_set_default_corners] canvas_corners=%s', canvas_corners)
-        logger.info('[_set_default_corners] frame_corners=%s', frame_corners)
-
-        if not canvas_corners or not frame_corners:
-            return
-
-        df_canvas_corners = pd.read_csv(io.BytesIO(bytes(canvas_corners)),
-                                        index_col=0)
-        df_frame_corners = pd.read_csv(io.BytesIO(bytes(frame_corners)),
-                                        index_col=0)
-
-        hub_execute(self.name, 'set_default_corners',
-                    canvas=df_canvas_corners, frame=df_frame_corners,
-                    wait_func=lambda *args: refresh_gui(), timeout_s=5)
-
-    def set_video_config(self):
-        if self.alive_timestamp is None or self.gui_process is None:
-            # Repeat until GUI process has started.
-            raise IOError('GUI process not ready.')
-
-        app_values = self.get_app_values()
-        video_config_json = app_values.get('video_config')
-
-        if not video_config_json:
-            video_config = pd.Series(None)
-        else:
-            video_config = pd.Series(json.loads(video_config_json))
-
-        hub_execute(self.name, 'set_video_config', video_config=video_config,
-                    wait_func=lambda *args: refresh_gui(), timeout_s=5)
-
-    def set_surface_alphas(self):
-        if self.alive_timestamp is None or self.gui_process is None:
-            # Repeat until GUI process has started.
-            raise IOError('GUI process not ready.')
-
-        app_values = self.get_app_values()
-        surface_alphas_json = app_values.get('surface_alphas')
-
-        if not surface_alphas_json:
-            return
-        surface_alphas = pd.Series(json.loads(surface_alphas_json))
-
-        hub_execute(self.name, 'set_surface_alphas',
-                    surface_alphas=surface_alphas,
-                    wait_func=lambda *args: refresh_gui(), timeout_s=5)
 
     def wait_for_gui_process(self, retry_count=10, retry_duration_s=1):
         start = datetime.now()
@@ -275,6 +153,227 @@ class DmfDeviceUiPlugin(AppDataController, Plugin):
         raise IOError('Timed out after %ss waiting for GUI process to connect '
                       'to hub.' % si_format((datetime.now() -
                                              start).total_seconds()))
+
+    def get_schedule_requests(self, function_name):
+        """
+        Returns a list of scheduling requests (i.e., ScheduleRequest instances)
+        for the function specified by function_name.
+        """
+        if function_name == 'on_plugin_enable':
+            return [ScheduleRequest('wheelerlab.droplet_planning_plugin',
+                                    self.name)]
+        return []
+
+    def on_app_exit(self):
+
+        self._gui_enabled = False
+        self.cleanup()
+
+    # #########################################################################
+    # # DMF device UI 0MQ plugin settings
+    def get_ui_json_settings(self):
+        '''
+        Get current video settings from DMF device UI plugin.
+
+        Returns
+        -------
+
+            (dict) : DMF device UI plugin settings in JSON-compatible format
+                (i.e., only basic Python data types).
+        '''
+        video_settings = {}
+
+        # Try to request video configuration.
+        try:
+            video_config = hub_execute(self.name, 'get_video_config',
+                                       wait_func=lambda *args: refresh_gui(),
+                                       timeout_s=2)
+        except IOError:
+            logger.warning('Timed out waiting for device window size and '
+                           'position request.')
+        else:
+            if video_config is not None:
+                video_settings['video_config'] = video_config.to_json()
+            else:
+                video_settings['video_config'] = ''
+
+        # Try to request allocation to save in app options.
+        try:
+            data = hub_execute(self.name, 'get_corners', wait_func=lambda
+                               *args: refresh_gui(), timeout_s=2)
+        except IOError:
+            logger.warning('Timed out waiting for device window size and '
+                           'position request.')
+        else:
+            if data:
+                # Get window allocation settings (i.e., width, height, x, y).
+
+                # Replace `df_..._corners` with CSV string named `..._corners`
+                # (no `df_` prefix).
+                for k in ('df_canvas_corners', 'df_frame_corners'):
+                    if k in data:
+                        data['allocation'][k[3:]] = data.pop(k).to_csv()
+                video_settings.update(data['allocation'])
+
+        # Try to request surface alphas.
+        try:
+            surface_alphas = hub_execute(self.name, 'get_surface_alphas',
+                                         wait_func=lambda *args: refresh_gui(),
+                                         timeout_s=2)
+        except IOError:
+            logger.warning('Timed out waiting for surface alphas.')
+        else:
+            if surface_alphas is not None:
+                video_settings['surface_alphas'] = surface_alphas.to_json()
+            else:
+                video_settings['surface_alphas'] = ''
+        return video_settings
+
+    def get_ui_settings(self):
+        '''
+        Get current video settings from DMF device UI plugin.
+
+        Returns
+        -------
+
+            (dict) : DMF device UI plugin settings in Python types expected by
+                DMF device UI plugin 0MQ commands.
+        '''
+        json_settings = self.get_ui_json_settings()
+        return self.json_settings_as_python(json_settings)
+
+    def json_settings_as_python(self, json_settings):
+        '''
+        Convert DMF device UI plugin settings from json format to Python types.
+
+        Python types are expected by DMF device UI plugin 0MQ command API.
+
+        Args
+        ----
+
+            json_settings (dict) : DMF device UI plugin settings in
+                JSON-compatible format (i.e., only basic Python data types).
+
+        Returns
+        -------
+
+            (dict) : DMF device UI plugin settings in Python types expected by
+                DMF device UI plugin 0MQ commands.
+        '''
+        py_settings = {}
+
+        corners = dict([(k, json_settings.get(k))
+                        for k in ('canvas_corners', 'frame_corners')])
+
+        if all(corners.values()):
+            # Convert CSV corners lists for canvas and frame to
+            # `pandas.DataFrame` instances
+            for k, v in corners.iteritems():
+                # Prepend `'df_'` to key to indicate the type as a data frame.
+                py_settings['df_' + k] = pd.read_csv(io.BytesIO(bytes(v)),
+                                                     index_col=0)
+
+        for k in ('video_config', 'surface_alphas'):
+            if k in json_settings:
+                if not json_settings[k]:
+                    py_settings[k] = pd.Series(None)
+                else:
+                    py_settings[k] = pd.Series(json.loads(json_settings[k]))
+
+        return py_settings
+
+    def save_ui_settings(self, video_settings):
+        '''
+        Save specified DMF device UI 0MQ plugin settings to persistent
+        Microdrop configuration (i.e., settings to be applied when Microdrop is
+        launched).
+
+        Args
+        ----
+
+            video_settings (dict) : DMF device UI plugin settings in
+                JSON-compatible format returned by `get_ui_json_settings`
+                method (i.e., only basic Python data types).
+        '''
+        app_values = self.get_app_values()
+        # Select subset of app values that are present in `video_settings`.
+        app_video_values = dict([(k, v) for k, v in app_values
+                                    if k in video_settings.keys()])
+
+        # If the specified video settings differ from app values, update
+        # app values.
+        if app_video_values != video_settings:
+            app_values.update(video_settings)
+            self.set_app_values(app_values)
+
+    def set_ui_settings(self, ui_settings, default_corners=False):
+        '''
+        Set DMF device UI settings from settings dictionary.
+
+        Args
+        ----
+
+            ui_settings (dict) : DMF device UI plugin settings in format
+                returned by `json_settings_as_python` method.
+        '''
+        if self.alive_timestamp is None or self.gui_process is None:
+            # Repeat until GUI process has started.
+            raise IOError('GUI process not ready.')
+
+        if 'video_config' in ui_settings:
+            hub_execute(self.name, 'set_video_config',
+                        video_config=ui_settings['video_config'],
+                        wait_func=lambda *args: refresh_gui(), timeout_s=5)
+
+        if 'surface_alphas' in ui_settings:
+            hub_execute(self.name, 'set_surface_alphas',
+                        surface_alphas=ui_settings['surface_alphas'],
+                        wait_func=lambda *args: refresh_gui(), timeout_s=5)
+
+        if all((k in ui_settings) for k in ('df_canvas_corners',
+                                            'df_frame_corners')):
+            if default_corners:
+                hub_execute(self.name, 'set_default_corners',
+                            canvas=ui_settings['df_canvas_corners'],
+                            frame=ui_settings['df_frame_corners'],
+                            wait_func=lambda *args: refresh_gui(), timeout_s=5)
+            else:
+                hub_execute(self.name, 'set_corners',
+                            df_canvas_corners=ui_settings['df_canvas_corners'],
+                            df_frame_corners=ui_settings['df_frame_corners'],
+                            wait_func=lambda *args: refresh_gui(), timeout_s=5)
+
+    # #########################################################################
+    # # Plugin signal handlers
+    def on_plugin_disable(self):
+        self._gui_enabled = False
+        self.cleanup()
+
+    def on_plugin_enable(self):
+        super(DmfDeviceUiPlugin, self).on_plugin_enable()
+        self.reset_gui()
+
+    def on_step_run(self):
+        '''
+        Handler called whenever a step is executed.
+
+        Plugins that handle this signal must emit the on_step_complete signal
+        once they have completed the step. The protocol controller will wait
+        until all plugins have completed the current step before proceeding.
+        '''
+        app = get_app()
+
+        if (app.realtime_mode or app.running) and self.gui_process is not None:
+            step_options = self.get_step_options()
+            if not step_options['video_enabled']:
+                hub_execute(self.name, 'disable_video',
+                            wait_func=lambda *args: refresh_gui(), timeout_s=5,
+                            silent=True)
+            else:
+                hub_execute(self.name, 'enable_video',
+                            wait_func=lambda *args: refresh_gui(), timeout_s=5,
+                            silent=True)
+        emit_signal('on_step_complete', [self.name, None])
 
 
 PluginGlobals.pop_env()
