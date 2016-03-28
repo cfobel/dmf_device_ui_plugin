@@ -165,7 +165,8 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         return []
 
     def on_app_exit(self):
-
+        json_settings = self.get_ui_json_settings()
+        self.save_ui_settings(json_settings)
         self._gui_enabled = False
         self.cleanup()
 
@@ -297,8 +298,8 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         '''
         app_values = self.get_app_values()
         # Select subset of app values that are present in `video_settings`.
-        app_video_values = dict([(k, v) for k, v in app_values
-                                    if k in video_settings.keys()])
+        app_video_values = dict([(k, v) for k, v in app_values.iteritems()
+                                 if k in video_settings.keys()])
 
         # If the specified video settings differ from app values, update
         # app values.
