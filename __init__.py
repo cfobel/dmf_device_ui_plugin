@@ -133,7 +133,7 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
             hub_execute_async(self.name, 'terminate')
         self.alive_timestamp = None
 
-    def wait_for_gui_process(self, retry_count=10, retry_duration_s=1):
+    def wait_for_gui_process(self, retry_count=20, retry_duration_s=1):
         start = datetime.now()
         for i in xrange(retry_count):
             try:
