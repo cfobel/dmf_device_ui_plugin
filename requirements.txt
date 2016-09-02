@@ -1,2 +1,7 @@
 dmf-device-ui>=0.2.post96
+flatland-fork>=0.4.post2
+pandas>=0.17.0
+path-helpers>=0.2.post3
+wheeler.pygtkhelpers>=0.13.17
 pyyaml
+si-prefix>=0.4.10
