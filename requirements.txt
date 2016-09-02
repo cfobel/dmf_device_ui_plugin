@@ -1,4 +1,4 @@
-dmf-device-ui>=0.2.post96
+dmf-device-ui>=0.2.post104
 flatland-fork>=0.4.post2
 pandas>=0.17.0
 path-helpers>=0.2.post3
