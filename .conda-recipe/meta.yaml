@@ -34,4 +34,4 @@ requirements:
 
 about:
   home: http://github.com/wheeler-microfluidics/dmf_device_ui_plugin
-  license: GPL
+  license: BSD
