@@ -4,18 +4,20 @@ source:
   git_url: ../
 
 package:
-  name: dmf-device-ui-plugin-requirements
+  name: dmf_device_ui_plugin
 {% if GIT_DESCRIBE_NUMBER > '0' %}
   version: {{ GIT_DESCRIBE_TAG[1:] }}.post{{ GIT_DESCRIBE_NUMBER }}
 {% else %}
   version: {{ GIT_DESCRIBE_TAG[1:] }}
 {% endif %}
 
+build:
+  number: 0
+  script: python -m mpm.bin.build
+
 requirements:
   build:
     - dmf-device-ui >=0.2.post109
-    - microdrop-plugin-template
-    - microdrop-utility
     - pandas
     - path_helpers >=0.2.post3
     - pyyaml
@@ -24,8 +26,6 @@ requirements:
 
   run:
     - dmf-device-ui >=0.2.post109
-    - microdrop-plugin-template
-    - microdrop-utility
     - pandas
     - path_helpers >=0.2.post3
     - pyyaml
