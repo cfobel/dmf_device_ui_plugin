@@ -18,6 +18,7 @@ build:
 requirements:
   build:
     - dmf-device-ui >=0.2.post109
+    - microdrop-plugin-manager >=0.10
     - pandas
     - path_helpers >=0.2.post3
     - pyyaml
@@ -26,6 +27,7 @@ requirements:
 
   run:
     - dmf-device-ui >=0.2.post109
+    - microdrop-plugin-manager >=0.10
     - pandas
     - path_helpers >=0.2.post3
     - pyyaml
