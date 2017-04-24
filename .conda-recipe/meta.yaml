@@ -18,7 +18,8 @@ build:
 requirements:
   build:
     - dmf-device-ui >=0.2.post109
-    - microdrop-plugin-manager >=0.10
+    - microdrop >=2.4
+    - microdrop-plugin-manager >=0.11
     - pandas
     - path_helpers >=0.2.post3
     - pyyaml
@@ -27,12 +28,17 @@ requirements:
 
   run:
     - dmf-device-ui >=0.2.post109
-    - microdrop-plugin-manager >=0.10
+    - microdrop >=2.4
+    - microdrop-plugin-manager >=0.11
     - pandas
     - path_helpers >=0.2.post3
     - pyyaml
     - si-prefix >=0.4.post10
     - wheeler.pygtkhelpers >=0.13.post17
+
+test:
+  commands:
+    - python -c "import importlib; import mpm.api; import os; import sys; sys.path.insert(0, mpm.api.MICRODROP_CONDA_SHARE.joinpath('plugins', 'available')); importlib.import_module(os.environ.get('PKG_NAME'))"
 
 about:
   home: http://github.com/wheeler-microfluidics/dmf_device_ui_plugin
