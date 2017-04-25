@@ -4,18 +4,22 @@ source:
   git_url: ../
 
 package:
-  name: dmf-device-ui-plugin-requirements
+  name: dmf_device_ui_plugin
 {% if GIT_DESCRIBE_NUMBER > '0' %}
   version: {{ GIT_DESCRIBE_TAG[1:] }}.post{{ GIT_DESCRIBE_NUMBER }}
 {% else %}
   version: {{ GIT_DESCRIBE_TAG[1:] }}
 {% endif %}
 
+build:
+  number: 0
+  script: python -m mpm.bin.build
+
 requirements:
   build:
     - dmf-device-ui >=0.2.post109
-    - microdrop-plugin-template
-    - microdrop-utility
+    - microdrop >=2.4
+    - microdrop-plugin-manager >=0.13
     - pandas
     - path_helpers >=0.2.post3
     - pyyaml
@@ -24,14 +28,18 @@ requirements:
 
   run:
     - dmf-device-ui >=0.2.post109
-    - microdrop-plugin-template
-    - microdrop-utility
+    - microdrop >=2.4
+    - microdrop-plugin-manager >=0.13
     - pandas
     - path_helpers >=0.2.post3
     - pyyaml
     - si-prefix >=0.4.post10
     - wheeler.pygtkhelpers >=0.13.post17
 
+test:
+  commands:
+    - python -m mpm.bin.import_test -a {{ PKG_NAME }}
+
 about:
   home: http://github.com/wheeler-microfluidics/dmf_device_ui_plugin
-  license: GPL
+  license: BSD

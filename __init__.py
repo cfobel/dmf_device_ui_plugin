@@ -130,7 +130,10 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         if self.gui_heartbeat_id is not None:
             gobject.source_remove(self.gui_heartbeat_id)
         if self.gui_process is not None:
-            hub_execute_async(self.name, 'terminate')
+            # XXX Use `hub_execute` here rather than `hub_execute_async` to
+            # ensure command is processed prior to the hub being closed during
+            # processing of `on_app_exit` signal.
+            hub_execute(self.name, 'terminate')
         self.alive_timestamp = None
 
     def wait_for_gui_process(self, retry_count=20, retry_duration_s=1):
@@ -162,6 +165,12 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         if function_name == 'on_plugin_enable':
             return [ScheduleRequest('wheelerlab.droplet_planning_plugin',
                                     self.name)]
+        elif function_name == 'on_app_exit':
+            # XXX Schedule `on_app_exit` handling before `device_info_plugin`,
+            # since `hub_execute` uses the `device_info_plugin` service to
+            # submit commands to through the 0MQ plugin hub.
+            return [ScheduleRequest(self.name,
+                                    'wheelerlab.device_info_plugin')]
         return []
 
     def on_app_exit(self):
@@ -378,3 +387,7 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
 
 
 PluginGlobals.pop_env()
+
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
