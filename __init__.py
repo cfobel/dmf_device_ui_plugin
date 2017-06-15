@@ -163,14 +163,12 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         for the function specified by function_name.
         """
         if function_name == 'on_plugin_enable':
-            return [ScheduleRequest('wheelerlab.droplet_planning_plugin',
-                                    self.name)]
+            return [ScheduleRequest('droplet_planning_plugin', self.name)]
         elif function_name == 'on_app_exit':
             # XXX Schedule `on_app_exit` handling before `device_info_plugin`,
             # since `hub_execute` uses the `device_info_plugin` service to
             # submit commands to through the 0MQ plugin hub.
-            return [ScheduleRequest(self.name,
-                                    'wheelerlab.device_info_plugin')]
+            return [ScheduleRequest(self.name, 'microdrop.device_info_plugin')]
         return []
 
     def on_app_exit(self):
