@@ -22,6 +22,7 @@ import io
 import json
 import logging
 import sys
+import threading
 import time
 
 from flatland import Boolean, Form, Integer, String
@@ -35,7 +36,11 @@ from path_helpers import path
 from pygtkhelpers.utils import refresh_gui
 from si_prefix import si_format
 import gobject
+import gtk
 import pandas as pd
+
+gtk.gdk.threads_init()
+
 
 logger = logging.getLogger(__name__)
 
@@ -118,13 +123,15 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
                 return True
         # Go back to Undo 613 for working corners
         self.step_video_settings = None
-        self.wait_for_gui_process()
-        # Get current video settings from UI.
-        app_values = self.get_app_values()
-        # Convert JSON settings to 0MQ plugin API Python types.
-        ui_settings = self.json_settings_as_python(app_values)
-        self.set_ui_settings(ui_settings, default_corners=True)
-        self.gui_heartbeat_id = gobject.timeout_add(1000, keep_alive)
+        def _wait_for_gui():
+            self.wait_for_gui_process()
+            # Get current video settings from UI.
+            app_values = self.get_app_values()
+            # Convert JSON settings to 0MQ plugin API Python types.
+            ui_settings = self.json_settings_as_python(app_values)
+            self.set_ui_settings(ui_settings, default_corners=True)
+            self.gui_heartbeat_id = gobject.timeout_add(1000, keep_alive)
+        gobject.idle_add(_wait_for_gui)
 
     def cleanup(self):
         if self.gui_heartbeat_id is not None:
