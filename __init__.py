@@ -22,6 +22,7 @@ import io
 import json
 import logging
 import sys
+import threading
 import time
 
 from flatland import Boolean, Form, Integer, String
@@ -35,7 +36,11 @@ from path_helpers import path
 from pygtkhelpers.utils import refresh_gui
 from si_prefix import si_format
 import gobject
+import gtk
 import pandas as pd
+
+gtk.gdk.threads_init()
+
 
 logger = logging.getLogger(__name__)
 
@@ -118,30 +123,35 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
                 return True
         # Go back to Undo 613 for working corners
         self.step_video_settings = None
-        self.wait_for_gui_process()
-        # Get current video settings from UI.
-        app_values = self.get_app_values()
-        # Convert JSON settings to 0MQ plugin API Python types.
-        ui_settings = self.json_settings_as_python(app_values)
-        self.set_ui_settings(ui_settings, default_corners=True)
-        self.gui_heartbeat_id = gobject.timeout_add(1000, keep_alive)
+        def _wait_for_gui():
+            self.wait_for_gui_process()
+            # Get current video settings from UI.
+            app_values = self.get_app_values()
+            # Convert JSON settings to 0MQ plugin API Python types.
+            ui_settings = self.json_settings_as_python(app_values)
+            self.set_ui_settings(ui_settings, default_corners=True)
+            self.gui_heartbeat_id = gobject.timeout_add(1000, keep_alive)
+        gobject.idle_add(_wait_for_gui)
 
     def cleanup(self):
+        logging.info('Stop DMF device UI keep-alive timer')
         if self.gui_heartbeat_id is not None:
             gobject.source_remove(self.gui_heartbeat_id)
         if self.gui_process is not None:
-            # XXX Use `hub_execute` here rather than `hub_execute_async` to
-            # ensure command is processed prior to the hub being closed during
-            # processing of `on_app_exit` signal.
-            hub_execute(self.name, 'terminate')
+            logging.info('Terminate DMF device UI process')
+            import win32api
+            import win32con
+            hProc = win32api.OpenProcess(win32con.PROCESS_TERMINATE, 0, self.gui_process.pid)
+            win32api.TerminateProcess(hProc, 0)
+        else:
+            logging.info('No active DMF device UI process')
         self.alive_timestamp = None
 
     def wait_for_gui_process(self, retry_count=20, retry_duration_s=1):
         start = datetime.now()
         for i in xrange(retry_count):
             try:
-                hub_execute(self.name, 'ping', wait_func=lambda *args:
-                            refresh_gui(), timeout_s=5, silent=True)
+                hub_execute(self.name, 'ping', timeout_s=5, silent=True)
             except:
                 logger.debug('[wait_for_gui_process] failed (%d of %d)', i + 1,
                              retry_count, exc_info=True)
@@ -172,6 +182,7 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         return []
 
     def on_app_exit(self):
+        logger.info('Get current video settings from DMF device UI plugin.')
         json_settings = self.get_ui_json_settings()
         self.save_ui_settings(json_settings)
         self._gui_enabled = False
@@ -194,7 +205,6 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         # Try to request video configuration.
         try:
             video_config = hub_execute(self.name, 'get_video_config',
-                                       wait_func=lambda *args: refresh_gui(),
                                        timeout_s=2)
         except IOError:
             logger.warning('Timed out waiting for device window size and '
@@ -207,8 +217,7 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
 
         # Try to request allocation to save in app options.
         try:
-            data = hub_execute(self.name, 'get_corners', wait_func=lambda
-                               *args: refresh_gui(), timeout_s=2)
+            data = hub_execute(self.name, 'get_corners', timeout_s=2)
         except IOError:
             logger.warning('Timed out waiting for device window size and '
                            'position request.')
@@ -226,7 +235,6 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         # Try to request surface alphas.
         try:
             surface_alphas = hub_execute(self.name, 'get_surface_alphas',
-                                         wait_func=lambda *args: refresh_gui(),
                                          timeout_s=2)
         except IOError:
             logger.warning('Timed out waiting for surface alphas.')
@@ -374,14 +382,14 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         if (app.realtime_mode or app.running) and self.gui_process is not None:
             step_options = self.get_step_options()
             if not step_options['video_enabled']:
-                hub_execute(self.name, 'disable_video',
-                            wait_func=lambda *args: refresh_gui(), timeout_s=5,
-                            silent=True)
+                command = 'disable_video'
             else:
-                hub_execute(self.name, 'enable_video',
-                            wait_func=lambda *args: refresh_gui(), timeout_s=5,
-                            silent=True)
-        emit_signal('on_step_complete', [self.name, None])
+                command = 'enable_video'
+            def _threadsafe_on_step_complete(*args):
+                emit_signal('on_step_complete', [self.name, None])
+            hub_execute_async(self.name,
+                              command, silent=True,
+                              callback=_threadsafe_on_step_complete)
 
 
 PluginGlobals.pop_env()
