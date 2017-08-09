@@ -381,14 +381,14 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         if (app.realtime_mode or app.running) and self.gui_process is not None:
             step_options = self.get_step_options()
             if not step_options['video_enabled']:
-                hub_execute(self.name, 'disable_video',
-                            wait_func=lambda *args: refresh_gui(), timeout_s=5,
-                            silent=True)
+                command = 'disable_video'
             else:
-                hub_execute(self.name, 'enable_video',
-                            wait_func=lambda *args: refresh_gui(), timeout_s=5,
-                            silent=True)
-        emit_signal('on_step_complete', [self.name, None])
+                command = 'enable_video'
+            def _threadsafe_on_step_complete(*args):
+                emit_signal('on_step_complete', [self.name, None])
+            hub_execute_async(self.name,
+                              command, silent=True,
+                              callback=_threadsafe_on_step_complete)
 
 
 PluginGlobals.pop_env()
