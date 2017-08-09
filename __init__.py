@@ -151,8 +151,7 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         start = datetime.now()
         for i in xrange(retry_count):
             try:
-                hub_execute(self.name, 'ping', wait_func=lambda *args:
-                            refresh_gui(), timeout_s=5, silent=True)
+                hub_execute(self.name, 'ping', timeout_s=5, silent=True)
             except:
                 logger.debug('[wait_for_gui_process] failed (%d of %d)', i + 1,
                              retry_count, exc_info=True)
@@ -205,7 +204,6 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         # Try to request video configuration.
         try:
             video_config = hub_execute(self.name, 'get_video_config',
-                                       wait_func=lambda *args: refresh_gui(),
                                        timeout_s=2)
         except IOError:
             logger.warning('Timed out waiting for device window size and '
@@ -218,8 +216,7 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
 
         # Try to request allocation to save in app options.
         try:
-            data = hub_execute(self.name, 'get_corners', wait_func=lambda
-                               *args: refresh_gui(), timeout_s=2)
+            data = hub_execute(self.name, 'get_corners', timeout_s=2)
         except IOError:
             logger.warning('Timed out waiting for device window size and '
                            'position request.')
@@ -237,7 +234,6 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         # Try to request surface alphas.
         try:
             surface_alphas = hub_execute(self.name, 'get_surface_alphas',
-                                         wait_func=lambda *args: refresh_gui(),
                                          timeout_s=2)
         except IOError:
             logger.warning('Timed out waiting for surface alphas.')
