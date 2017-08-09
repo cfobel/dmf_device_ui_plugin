@@ -134,13 +134,17 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         gobject.idle_add(_wait_for_gui)
 
     def cleanup(self):
+        logging.info('Stop DMF device UI keep-alive timer')
         if self.gui_heartbeat_id is not None:
             gobject.source_remove(self.gui_heartbeat_id)
         if self.gui_process is not None:
-            # XXX Use `hub_execute` here rather than `hub_execute_async` to
-            # ensure command is processed prior to the hub being closed during
-            # processing of `on_app_exit` signal.
-            hub_execute(self.name, 'terminate')
+            logging.info('Terminate DMF device UI process')
+            import win32api
+            import win32con
+            hProc = win32api.OpenProcess(win32con.PROCESS_TERMINATE, 0, self.gui_process.pid)
+            win32api.TerminateProcess(hProc, 0)
+        else:
+            logging.info('No active DMF device UI process')
         self.alive_timestamp = None
 
     def wait_for_gui_process(self, retry_count=20, retry_duration_s=1):
