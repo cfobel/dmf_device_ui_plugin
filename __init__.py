@@ -182,6 +182,7 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         return []
 
     def on_app_exit(self):
+        logger.info('Get current video settings from DMF device UI plugin.')
         json_settings = self.get_ui_json_settings()
         self.save_ui_settings(json_settings)
         self._gui_enabled = False
