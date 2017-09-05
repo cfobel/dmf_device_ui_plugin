@@ -24,7 +24,7 @@ requirements:
     - path_helpers >=0.2.post3
     - pyyaml
     - si-prefix >=0.4.post10
-    - wheeler.pygtkhelpers >=0.13.post17
+    - wheeler.pygtkhelpers >=0.18
 
   run:
     - dmf-device-ui >=0.2.post109
@@ -34,7 +34,7 @@ requirements:
     - path_helpers >=0.2.post3
     - pyyaml
     - si-prefix >=0.4.post10
-    - wheeler.pygtkhelpers >=0.13.post17
+    - wheeler.pygtkhelpers >=0.18
 
 test:
   commands:
