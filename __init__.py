@@ -135,9 +135,15 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
             ui_settings = self.json_settings_as_python(app_values)
             self.set_ui_settings(ui_settings, default_corners=True)
             self.gui_heartbeat_id = gobject.timeout_add(1000, keep_alive)
-        gobject.idle_add(_wait_for_gui)
+
+        # Call as thread-safe function, since function uses GTK.
+        _wait_for_gui()
 
     def cleanup(self):
+        '''
+        .. versionchanged:: 2.2.2
+            Catch any exception encountered during GUI process termination.
+        '''
         logging.info('Stop DMF device UI keep-alive timer')
         if self.gui_heartbeat_id is not None:
             gobject.source_remove(self.gui_heartbeat_id)
@@ -145,8 +151,12 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
             logging.info('Terminate DMF device UI process')
             import win32api
             import win32con
-            hProc = win32api.OpenProcess(win32con.PROCESS_TERMINATE, 0, self.gui_process.pid)
-            win32api.TerminateProcess(hProc, 0)
+            try:
+                hProc = win32api.OpenProcess(win32con.PROCESS_TERMINATE, 0,
+                                             self.gui_process.pid)
+                win32api.TerminateProcess(hProc, 0)
+            except Exception:
+                logging.info('Warning: could not close DMF device UI process')
         else:
             logging.info('No active DMF device UI process')
         self.alive_timestamp = None
