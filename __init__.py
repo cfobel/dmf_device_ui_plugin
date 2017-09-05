@@ -1,5 +1,5 @@
 """
-Copyright 2015-2016 Christian Fobel
+Copyright 2015-2017 Christian Fobel
 
 This file is part of dmf_device_ui_plugin.
 
@@ -22,7 +22,6 @@ import io
 import json
 import logging
 import sys
-import threading
 import time
 
 from flatland import Boolean, Form, Integer, String
@@ -33,6 +32,7 @@ from microdrop.plugin_manager import (IPlugin, Plugin, PluginGlobals,
                                       ScheduleRequest, emit_signal, implements)
 from microdrop.app_context import get_app, get_hub_uri
 from path_helpers import path
+from pygtkhelpers.gthreads import gtk_threadsafe
 from pygtkhelpers.utils import refresh_gui
 from si_prefix import si_format
 import gobject
@@ -92,6 +92,12 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         self.alive_timestamp = None
 
     def reset_gui(self):
+        '''
+        .. versionchanged:: 2.2.2
+            Use :func:`pygtkhelpers.gthreads.gtk_threadsafe` decorator around
+            function to wait for GUI process, rather than using
+            :func:`gobject.idle_add`, to make intention clear.
+        '''
         py_exe = sys.executable
         # Set allocation based on saved app values (i.e., remember window size
         # and position from last run).
@@ -124,8 +130,10 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
                 self.alive_timestamp = datetime.now()
                 # Keep checking.
                 return True
-        # Go back to Undo 613 for working corners
+
         self.step_video_settings = None
+
+        @gtk_threadsafe
         def _wait_for_gui():
             self.wait_for_gui_process()
             # Get current video settings from UI.
@@ -164,8 +172,9 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         start = datetime.now()
         for i in xrange(retry_count):
             try:
-                hub_execute(self.name, 'ping', timeout_s=5, silent=True)
-            except:
+                hub_execute(self.name, 'ping', wait_func=lambda *args:
+                            refresh_gui(), timeout_s=5, silent=True)
+            except Exception:
                 logger.debug('[wait_for_gui_process] failed (%d of %d)', i + 1,
                              retry_count, exc_info=True)
             else:
@@ -389,6 +398,10 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         Plugins that handle this signal must emit the on_step_complete signal
         once they have completed the step. The protocol controller will wait
         until all plugins have completed the current step before proceeding.
+
+        .. versionchanged:: 2.2.2
+            Emit ``on_step_complete`` signal within thread-safe function, since
+            signal callbacks may use GTK.
         '''
         app = get_app()
 
@@ -398,10 +411,13 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
                 command = 'disable_video'
             else:
                 command = 'enable_video'
+
+            # Call as thread-safe function, since signal callbacks may use GTK.
+            @gtk_threadsafe
             def _threadsafe_on_step_complete(*args):
                 emit_signal('on_step_complete', [self.name, None])
-            hub_execute_async(self.name,
-                              command, silent=True,
+
+            hub_execute_async(self.name, command, silent=True,
                               callback=_threadsafe_on_step_complete)
 
 
