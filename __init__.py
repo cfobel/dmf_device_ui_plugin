@@ -39,6 +39,10 @@ import gobject
 import gtk
 import pandas as pd
 
+from ._version import get_versions
+__version__ = get_versions()['version']
+del get_versions
+
 gtk.gdk.threads_init()
 
 
@@ -393,7 +397,3 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
 
 
 PluginGlobals.pop_env()
-
-from ._version import get_versions
-__version__ = get_versions()['version']
-del get_versions
