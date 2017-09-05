@@ -109,7 +109,6 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
                                   self.name] + allocation_args + debug_args +
                                  ['fixed', get_hub_uri()],
                                  creationflags=CREATE_NEW_PROCESS_GROUP)
-        self.gui_process.daemon = False
         self._gui_enabled = True
 
         def keep_alive():
