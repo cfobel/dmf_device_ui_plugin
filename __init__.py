@@ -133,11 +133,12 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         .. versionchanged:: 2.2.2
             Catch any exception encountered during GUI process termination.
         '''
-        logging.info('Stop DMF device UI keep-alive timer')
+        logger.info('Stop DMF device UI keep-alive timer')
         if self.gui_heartbeat_id is not None:
+            # Stop keep-alive polling of device UI process.
             gobject.source_remove(self.gui_heartbeat_id)
         if self.gui_process is not None:
-            logging.info('Terminate DMF device UI process')
+            logger.info('Terminate DMF device UI process')
             import win32api
             import win32con
             try:
@@ -145,9 +146,9 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
                                              self.gui_process.pid)
                 win32api.TerminateProcess(hProc, 0)
             except Exception:
-                logging.info('Warning: could not close DMF device UI process')
+                logger.info('Warning: could not close DMF device UI process')
         else:
-            logging.info('No active DMF device UI process')
+            logger.info('No active DMF device UI process')
         self.alive_timestamp = None
 
     def wait_for_gui_process(self, retry_count=20, retry_duration_s=1):
