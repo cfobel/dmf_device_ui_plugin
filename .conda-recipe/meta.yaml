@@ -18,20 +18,22 @@ build:
 
 requirements:
   build:
-    - dmf-device-ui >=0.2.post109
+    - dmf-device-ui >=0.6.1
     - microdrop >=2.4
     - microdrop-plugin-manager >=0.17
     - pandas
     - path_helpers >=0.2.post3
+    - psutil >=5.4.0
     - pyyaml
     - si-prefix >=0.4.post10
     - wheeler.pygtkhelpers >=0.18
 
   run:
-    - dmf-device-ui >=0.2.post109
+    - dmf-device-ui >=0.6.1
     - microdrop >=2.4
     - microdrop-plugin-manager >=0.17
     - pandas
+    - psutil >=5.4.0
     - path_helpers >=0.2.post3
     - pyyaml
     - si-prefix >=0.4.post10
