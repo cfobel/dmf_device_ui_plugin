@@ -20,6 +20,7 @@ from si_prefix import si_format
 import gobject
 import gtk
 import pandas as pd
+import psutil
 
 from ._version import get_versions
 __version__ = get_versions()['version']
@@ -32,6 +33,29 @@ logger = logging.getLogger(__name__)
 
 
 PluginGlobals.push_env('microdrop.managed')
+
+
+def kill_process_tree(pid, including_parent=True):
+    '''
+    Cross-platform function to kill a parent process and all child processes.
+
+    Based on from `subprocess: deleting child processes in Windows <https://stackoverflow.com/a/4229404/345236>`_
+
+    Parameters
+    ----------
+    pid : int
+        Process ID of parent process.
+    including_parent : bool, optional
+        If ``True``, also kill parent process.
+    '''
+    parent = psutil.Process(pid)
+    children = parent.children(recursive=True)
+    for child in children:
+        child.kill()
+    gone, still_alive = psutil.wait_procs(children, timeout=5)
+    if including_parent:
+        parent.kill()
+        parent.wait(5)
 
 
 class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
@@ -132,22 +156,30 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         '''
         .. versionchanged:: 2.2.2
             Catch any exception encountered during GUI process termination.
+
+        .. versionchanged:: 2.3.1
+            Use :func:`kill_process_tree` to terminate DMF device UI process.
+
+            This ensures any child processes of the UI process (e.g., video
+            input process) are also killed.
+
+            See also:
+            https://stackoverflow.com/a/44648162/345236
         '''
-        logging.info('Stop DMF device UI keep-alive timer')
+        logger.info('Stop DMF device UI keep-alive timer')
         if self.gui_heartbeat_id is not None:
+            # Stop keep-alive polling of device UI process.
             gobject.source_remove(self.gui_heartbeat_id)
         if self.gui_process is not None:
-            logging.info('Terminate DMF device UI process')
-            import win32api
-            import win32con
+            logger.info('Terminate DMF device UI process')
             try:
-                hProc = win32api.OpenProcess(win32con.PROCESS_TERMINATE, 0,
-                                             self.gui_process.pid)
-                win32api.TerminateProcess(hProc, 0)
+                kill_process_tree(self.gui_process.pid)
+                logger.info('Close DMF device UI process `%s`', self.gui_process.pid)
             except Exception:
-                logging.info('Warning: could not close DMF device UI process')
+                logger.info('Unexpected error closing DMF device UI process '
+                            '`%s`', self.gui_process.pid, exc_info=True)
         else:
-            logging.info('No active DMF device UI process')
+            logger.info('No active DMF device UI process')
         self.alive_timestamp = None
 
     def wait_for_gui_process(self, retry_count=20, retry_duration_s=1):
