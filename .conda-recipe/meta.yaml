@@ -18,7 +18,7 @@ build:
 
 requirements:
   build:
-    - dmf-device-ui >=0.6.1
+    - dmf-device-ui >=0.6.2
     - microdrop >=2.4
     - microdrop-plugin-manager >=0.17
     - pandas
@@ -29,7 +29,7 @@ requirements:
     - wheeler.pygtkhelpers >=0.18
 
   run:
-    - dmf-device-ui >=0.6.1
+    - dmf-device-ui >=0.6.2
     - microdrop >=2.4
     - microdrop-plugin-manager >=0.17
     - pandas
