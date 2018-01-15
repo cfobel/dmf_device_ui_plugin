@@ -156,6 +156,15 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         '''
         .. versionchanged:: 2.2.2
             Catch any exception encountered during GUI process termination.
+
+        .. versionchanged:: 2.3.1
+            Use :func:`kill_process_tree` to terminate DMF device UI process.
+
+            This ensures any child processes of the UI process (e.g., video
+            input process) are also killed.
+
+            See also:
+            https://stackoverflow.com/a/44648162/345236
         '''
         logger.info('Stop DMF device UI keep-alive timer')
         if self.gui_heartbeat_id is not None:
