@@ -20,8 +20,10 @@ requirements:
   build:
     #: ..versionchanged:: 2.3.1
     #: ..versionchanged:: 2.3.2
-    - dmf-device-ui >=0.6.3
-    - microdrop >=2.4
+    #: ..versionchanged:: 2.3.4
+    - dmf-device-ui >=0.6.4
+    #: ..versionchanged:: 2.3.4
+    - microdrop >=2.15.2
     - microdrop-plugin-manager >=0.17
     - pandas
     - path_helpers >=0.2.post3
@@ -34,8 +36,10 @@ requirements:
   run:
     #: ..versionchanged:: 2.3.1
     #: ..versionchanged:: 2.3.2
-    - dmf-device-ui >=0.6.3
-    - microdrop >=2.4
+    #: ..versionchanged:: 2.3.4
+    - dmf-device-ui >=0.6.4
+    #: ..versionchanged:: 2.3.4
+    - microdrop >=2.15.2
     - microdrop-plugin-manager >=0.17
     - pandas
     #: ..versionadded:: 2.3.1
