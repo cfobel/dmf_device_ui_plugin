@@ -207,14 +207,15 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         """
         Returns a list of scheduling requests (i.e., ScheduleRequest instances)
         for the function specified by function_name.
+
+        .. versionchanged:: 2.3.3
+            Do not submit ``on_app_exit`` schedule request.  This is no longer
+            necessary since ``hub_execute`` listening socket is no longer
+            closed by ``microdrop.device_info_plugin`` during ``on_app_exit``
+            callback.
         """
         if function_name == 'on_plugin_enable':
             return [ScheduleRequest('droplet_planning_plugin', self.name)]
-        elif function_name == 'on_app_exit':
-            # XXX Schedule `on_app_exit` handling before `device_info_plugin`,
-            # since `hub_execute` uses the `device_info_plugin` service to
-            # submit commands to through the 0MQ plugin hub.
-            return [ScheduleRequest(self.name, 'microdrop.device_info_plugin')]
         return []
 
     def on_app_exit(self):
