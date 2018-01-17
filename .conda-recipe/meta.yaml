@@ -21,7 +21,8 @@ requirements:
     #: ..versionchanged:: 2.3.1
     #: ..versionchanged:: 2.3.2
     #: ..versionchanged:: 2.3.4
-    - dmf-device-ui >=0.6.4
+    #: ..versionchanged:: 2.4
+    - dmf-device-ui >=0.7.1
     #: ..versionchanged:: 2.3.4
     - microdrop >=2.15.2
     - microdrop-plugin-manager >=0.17
@@ -31,13 +32,13 @@ requirements:
     - psutil >=5.4.0
     - pyyaml
     - si-prefix >=0.4.post10
-    - wheeler.pygtkhelpers >=0.18
 
   run:
     #: ..versionchanged:: 2.3.1
     #: ..versionchanged:: 2.3.2
     #: ..versionchanged:: 2.3.4
-    - dmf-device-ui >=0.6.4
+    #: ..versionchanged:: 2.4
+    - dmf-device-ui >=0.7.1
     #: ..versionchanged:: 2.3.4
     - microdrop >=2.15.2
     - microdrop-plugin-manager >=0.17
@@ -47,7 +48,6 @@ requirements:
     - path_helpers >=0.2.post3
     - pyyaml
     - si-prefix >=0.4.post10
-    - wheeler.pygtkhelpers >=0.18
 
 test:
   commands:
