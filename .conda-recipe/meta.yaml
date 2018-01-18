@@ -24,7 +24,8 @@ requirements:
     #: ..versionchanged:: 2.4
     - dmf-device-ui >=0.7.1
     #: ..versionchanged:: 2.3.4
-    - microdrop >=2.15.2
+    #: ..versionchanged:: 2.4.1
+    - microdrop >=2.17
     - microdrop-plugin-manager >=0.17
     - pandas
     - path_helpers >=0.2.post3
@@ -40,7 +41,8 @@ requirements:
     #: ..versionchanged:: 2.4
     - dmf-device-ui >=0.7.1
     #: ..versionchanged:: 2.3.4
-    - microdrop >=2.15.2
+    #: ..versionchanged:: 2.4.1
+    - microdrop >=2.17
     - microdrop-plugin-manager >=0.17
     - pandas
     #: ..versionadded:: 2.3.1
