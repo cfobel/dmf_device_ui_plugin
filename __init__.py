@@ -165,16 +165,20 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
 
             See also:
             https://stackoverflow.com/a/44648162/345236
+
+        .. versionchanged:: X.X.X
+            Only try to terminate the GUI process if it is still running.
         '''
         logger.info('Stop DMF device UI keep-alive timer')
         if self.gui_heartbeat_id is not None:
             # Stop keep-alive polling of device UI process.
             gobject.source_remove(self.gui_heartbeat_id)
-        if self.gui_process is not None:
+        if self.gui_process is not None and self.gui_process.poll() is None:
             logger.info('Terminate DMF device UI process')
             try:
                 kill_process_tree(self.gui_process.pid)
-                logger.info('Close DMF device UI process `%s`', self.gui_process.pid)
+                logger.info('Close DMF device UI process `%s`',
+                            self.gui_process.pid)
             except Exception:
                 logger.info('Unexpected error closing DMF device UI process '
                             '`%s`', self.gui_process.pid, exc_info=True)
