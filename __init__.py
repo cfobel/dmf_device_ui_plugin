@@ -166,7 +166,7 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
             See also:
             https://stackoverflow.com/a/44648162/345236
 
-        .. versionchanged:: X.X.X
+        .. versionchanged:: 2.7
             Only try to terminate the GUI process if it is still running.
         '''
         logger.info('Stop DMF device UI keep-alive timer')
