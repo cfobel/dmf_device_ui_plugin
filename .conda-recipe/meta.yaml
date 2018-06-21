@@ -22,8 +22,8 @@ requirements:
     #: ..versionchanged:: 2.3.2
     #: ..versionchanged:: 2.3.4
     #: ..versionchanged:: 2.4
-    #: ..versionchanged:: X.X.X
-    - dmf-device-ui >=0.8
+    #: ..versionchanged:: 2.7
+    - dmf-device-ui >=0.11
     #: ..versionchanged:: 2.3.4
     #: ..versionchanged:: 2.4.1
     - microdrop >=2.17
@@ -40,8 +40,8 @@ requirements:
     #: ..versionchanged:: 2.3.2
     #: ..versionchanged:: 2.3.4
     #: ..versionchanged:: 2.4
-    #: ..versionchanged:: X.X.X
-    - dmf-device-ui >=0.8
+    #: ..versionchanged:: 2.7
+    - dmf-device-ui >=0.11
     #: ..versionchanged:: 2.3.4
     #: ..versionchanged:: 2.4.1
     - microdrop >=2.17
