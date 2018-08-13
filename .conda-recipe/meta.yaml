@@ -24,7 +24,9 @@ requirements:
     #: ..versionchanged:: 2.4
     #: ..versionchanged:: 2.7
     #: ..versionchanged:: 2.7.1
-    - dmf-device-ui >=0.11.3
+    #: ..versionchanged:: 2.8
+    #:     Draw dynamic actuation states.
+    - dmf-device-ui >=0.12
     #: ..versionchanged:: 2.3.4
     #: ..versionchanged:: 2.4.1
     #: ..versionchanged:: 2.7.1
@@ -46,7 +48,9 @@ requirements:
     #: ..versionchanged:: 2.4
     #: ..versionchanged:: 2.7
     #: ..versionchanged:: 2.7.1
-    - dmf-device-ui >=0.11.3
+    #: ..versionchanged:: 2.8
+    #:     Draw dynamic actuation states.
+    - dmf-device-ui >=0.12
     #: ..versionchanged:: 2.3.4
     #: ..versionchanged:: 2.4.1
     #: ..versionchanged:: 2.7.1
