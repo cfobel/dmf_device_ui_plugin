@@ -27,7 +27,10 @@ requirements:
     - dmf-device-ui >=0.11.3
     #: ..versionchanged:: 2.3.4
     #: ..versionchanged:: 2.4.1
-    - microdrop >=2.17
+    #: ..versionchanged:: 2.7.1
+    #:     Use `hub_execute` that runs in background thread (not in GTK
+    #:     thread).
+    - microdrop >=2.25
     - microdrop-plugin-manager >=0.17
     - pandas
     - path_helpers >=0.2.post3
@@ -46,7 +49,10 @@ requirements:
     - dmf-device-ui >=0.11.3
     #: ..versionchanged:: 2.3.4
     #: ..versionchanged:: 2.4.1
-    - microdrop >=2.17
+    #: ..versionchanged:: 2.7.1
+    #:     Use `hub_execute` that runs in background thread (not in GTK
+    #:     thread).
+    - microdrop >=2.25
     - microdrop-plugin-manager >=0.17
     - pandas
     #: ..versionadded:: 2.3.1

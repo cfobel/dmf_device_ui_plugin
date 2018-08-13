@@ -187,11 +187,15 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
         self.alive_timestamp = None
 
     def wait_for_gui_process(self, retry_count=20, retry_duration_s=1):
+        '''
+        .. versionchanged:: 2.7.2
+            Do not execute `refresh_gui()` while waiting for response from
+            `hub_execute()`.
+        '''
         start = datetime.now()
         for i in xrange(retry_count):
             try:
-                hub_execute(self.name, 'ping', wait_func=lambda *args:
-                            refresh_gui(), timeout_s=5, silent=True)
+                hub_execute(self.name, 'ping', timeout_s=5, silent=True)
             except Exception:
                 logger.debug('[wait_for_gui_process] failed (%d of %d)', i + 1,
                              retry_count, exc_info=True)
@@ -240,6 +244,11 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
 
             (dict) : DMF device UI plugin settings in JSON-compatible format
                 (i.e., only basic Python data types).
+
+
+        .. versionchanged:: 2.7.2
+            Do not execute `refresh_gui()` while waiting for response from
+            `hub_execute()`.
         '''
         video_settings = {}
 
@@ -372,6 +381,11 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
 
             ui_settings (dict) : DMF device UI plugin settings in format
                 returned by `json_settings_as_python` method.
+
+
+        .. versionchanged:: 2.7.2
+            Do not execute `refresh_gui()` while waiting for response from
+            `hub_execute()`.
         '''
         if self.alive_timestamp is None or self.gui_process is None:
             # Repeat until GUI process has started.
@@ -379,26 +393,24 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
 
         if 'video_config' in ui_settings:
             hub_execute(self.name, 'set_video_config',
-                        video_config=ui_settings['video_config'],
-                        wait_func=lambda *args: refresh_gui(), timeout_s=5)
+                        video_config=ui_settings['video_config'], timeout_s=5)
 
         if 'surface_alphas' in ui_settings:
             hub_execute(self.name, 'set_surface_alphas',
                         surface_alphas=ui_settings['surface_alphas'],
-                        wait_func=lambda *args: refresh_gui(), timeout_s=5)
+                        timeout_s=5)
 
         if all((k in ui_settings) for k in ('df_canvas_corners',
                                             'df_frame_corners')):
             if default_corners:
                 hub_execute(self.name, 'set_default_corners',
                             canvas=ui_settings['df_canvas_corners'],
-                            frame=ui_settings['df_frame_corners'],
-                            wait_func=lambda *args: refresh_gui(), timeout_s=5)
+                            frame=ui_settings['df_frame_corners'], timeout_s=5)
             else:
                 hub_execute(self.name, 'set_corners',
                             df_canvas_corners=ui_settings['df_canvas_corners'],
                             df_frame_corners=ui_settings['df_frame_corners'],
-                            wait_func=lambda *args: refresh_gui(), timeout_s=5)
+                            timeout_s=5)
 
     # #########################################################################
     # # Plugin signal handlers
