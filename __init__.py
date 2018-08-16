@@ -443,13 +443,10 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
             else:
                 command = 'enable_video'
 
-            # Call as thread-safe function, since signal callbacks may use GTK.
-            @gtk_threadsafe
-            def _threadsafe_on_step_complete(*args):
-                emit_signal('on_step_complete', [self.name, None])
+            hub_execute(self.name, command)
 
-            hub_execute_async(self.name, command, silent=True,
-                              callback=_threadsafe_on_step_complete)
+            # Call as thread-safe function, since signal callbacks may use GTK.
+            gtk_threadsafe(emit_signal)('on_step_complete', [self.name, None])
 
 
 PluginGlobals.pop_env()
