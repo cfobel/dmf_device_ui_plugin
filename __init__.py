@@ -8,8 +8,7 @@ import time
 
 from flatland import Boolean, Form, Integer, String
 from microdrop.plugin_helpers import (AppDataController, StepOptionsController,
-                                      get_plugin_info, hub_execute,
-                                      hub_execute_async)
+                                      get_plugin_info, hub_execute)
 from microdrop.plugin_manager import (IPlugin, Plugin, PluginGlobals,
                                       ScheduleRequest, emit_signal, implements)
 from microdrop.app_context import get_app, get_hub_uri
@@ -103,6 +102,11 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
             Use :func:`pygtkhelpers.gthreads.gtk_threadsafe` decorator around
             function to wait for GUI process, rather than using
             :func:`gobject.idle_add`, to make intention clear.
+
+        .. versionchanged:: X.X.X
+            Refresh list of registered commands once device UI process has
+            started.  The list of registered commands is used to dynamically
+            generate items in the device UI context menu.
         '''
         py_exe = sys.executable
         # Set allocation based on saved app values (i.e., remember window size
@@ -148,6 +152,8 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
             ui_settings = self.json_settings_as_python(app_values)
             self.set_ui_settings(ui_settings, default_corners=True)
             self.gui_heartbeat_id = gobject.timeout_add(1000, keep_alive)
+            # Refresh list of electrode and route commands.
+            hub_execute('microdrop.command_plugin', 'get_commands')
 
         # Call as thread-safe function, since function uses GTK.
         _wait_for_gui()
@@ -221,9 +227,15 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
             necessary since ``hub_execute`` listening socket is no longer
             closed by ``microdrop.device_info_plugin`` during ``on_app_exit``
             callback.
+
+        .. versionadded:: X.X.X
+            Enable _after_ command plugin and zmq hub plugin.
         """
         if function_name == 'on_plugin_enable':
-            return [ScheduleRequest('droplet_planning_plugin', self.name)]
+            return [ScheduleRequest(p, self.name)
+                    for p in ('microdrop.zmq_hub_plugin',
+                              'microdrop.command_plugin',
+                              'droplet_planning_plugin')]
         return []
 
     def on_app_exit(self):
