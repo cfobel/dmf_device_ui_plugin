@@ -26,7 +26,7 @@ requirements:
     #: ..versionchanged:: 2.7.1
     #: ..versionchanged:: 2.8
     #:     Draw dynamic actuation states.
-    #: ..versionchanged:: X.X.X
+    #: ..versionchanged:: 2.9
     #:     Dynamically generate context menu from registered commands.
     - dmf-device-ui >=0.13
     #: ..versionchanged:: 2.3.4
@@ -52,7 +52,7 @@ requirements:
     #: ..versionchanged:: 2.7.1
     #: ..versionchanged:: 2.8
     #:     Draw dynamic actuation states.
-    #: ..versionchanged:: X.X.X
+    #: ..versionchanged:: 2.9
     #:     Dynamically generate context menu from registered commands.
     - dmf-device-ui >=0.13
     #: ..versionchanged:: 2.3.4

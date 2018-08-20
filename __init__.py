@@ -103,7 +103,7 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
             function to wait for GUI process, rather than using
             :func:`gobject.idle_add`, to make intention clear.
 
-        .. versionchanged:: X.X.X
+        .. versionchanged:: 2.9
             Refresh list of registered commands once device UI process has
             started.  The list of registered commands is used to dynamically
             generate items in the device UI context menu.
@@ -228,7 +228,7 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
             closed by ``microdrop.device_info_plugin`` during ``on_app_exit``
             callback.
 
-        .. versionadded:: X.X.X
+        .. versionadded:: 2.9
             Enable _after_ command plugin and zmq hub plugin.
         """
         if function_name == 'on_plugin_enable':
