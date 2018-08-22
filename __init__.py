@@ -3,6 +3,7 @@ from subprocess import Popen, CREATE_NEW_PROCESS_GROUP
 import io
 import json
 import logging
+import os
 import sys
 import time
 
@@ -65,7 +66,8 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
 
     .. versionchanged:: X.X.X
         Set default window size and position according to **screen size** *and*
-        **window titlebar size**.
+        **window titlebar size**.  Also, force default window size if
+        ``MICRODROP_FIRST_RUN`` environment variable is set to non-empty value.
     """
     implements(IPlugin)
     version = get_plugin_info(path(__file__).parent).version
@@ -118,9 +120,16 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
             generate items in the device UI context menu.
         '''
         py_exe = sys.executable
+
         # Set allocation based on saved app values (i.e., remember window size
         # and position from last run).
         app_values = self.get_app_values()
+        if os.environ.get('MICRODROP_FIRST_RUN'):
+            # Use default options for window allocation.
+            default_app_values = self.get_default_app_options()
+            for k in ('x', 'y', 'width', 'height'):
+                app_values[k] = default_app_values[k]
+
         allocation_args = ['-a', json.dumps(app_values)]
 
         app = get_app()
