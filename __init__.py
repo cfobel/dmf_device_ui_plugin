@@ -64,7 +64,7 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
     """
     This class is automatically registered with the PluginManager.
 
-    .. versionchanged:: X.X.X
+    .. versionchanged:: 2.10
         Set default window size and position according to **screen size** *and*
         **window titlebar size**.  Also, force default window size if
         ``MICRODROP_FIRST_RUN`` environment variable is set to non-empty value.

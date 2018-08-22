@@ -34,7 +34,7 @@ requirements:
     #: ..versionchanged:: 2.7.1
     #:     Use `hub_execute` that runs in background thread (not in GTK
     #:     thread).
-    #: ..versionchanged:: X.X.X
+    #: ..versionchanged:: 2.10
     #:     Set main window default geometry to fill left-hand side of screen.
     - microdrop >=2.26
     - microdrop-plugin-manager >=0.17
@@ -62,7 +62,7 @@ requirements:
     #: ..versionchanged:: 2.7.1
     #:     Use `hub_execute` that runs in background thread (not in GTK
     #:     thread).
-    #: ..versionchanged:: X.X.X
+    #: ..versionchanged:: 2.10
     #:     Set main window default geometry to fill left-hand side of screen.
     - microdrop >=2.26
     - microdrop-plugin-manager >=0.17
