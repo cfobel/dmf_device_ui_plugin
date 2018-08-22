@@ -3,6 +3,7 @@ from subprocess import Popen, CREATE_NEW_PROCESS_GROUP
 import io
 import json
 import logging
+import os
 import sys
 import time
 
@@ -11,7 +12,8 @@ from microdrop.plugin_helpers import (AppDataController, StepOptionsController,
                                       get_plugin_info, hub_execute)
 from microdrop.plugin_manager import (IPlugin, Plugin, PluginGlobals,
                                       ScheduleRequest, emit_signal, implements)
-from microdrop.app_context import get_app, get_hub_uri
+from microdrop.app_context import (get_app, get_hub_uri, SCREEN_WIDTH,
+                                   SCREEN_HEIGHT, SCREEN_TOP, TITLEBAR_HEIGHT)
 from path_helpers import path
 from pygtkhelpers.gthreads import gtk_threadsafe
 from pygtkhelpers.utils import refresh_gui
@@ -57,9 +59,15 @@ def kill_process_tree(pid, including_parent=True):
         parent.wait(5)
 
 
+
 class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
     """
     This class is automatically registered with the PluginManager.
+
+    .. versionchanged:: 2.10
+        Set default window size and position according to **screen size** *and*
+        **window titlebar size**.  Also, force default window size if
+        ``MICRODROP_FIRST_RUN`` environment variable is set to non-empty value.
     """
     implements(IPlugin)
     version = get_plugin_info(path(__file__).parent).version
@@ -76,13 +84,16 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
                                                          False}),
         String.named('frame_corners').using(default='', optional=True,
                                             properties={'show_in_gui': False}),
-        Integer.named('x').using(default=None, optional=True,
+        Integer.named('x').using(default=.5 * SCREEN_WIDTH,
+                                 optional=True,
                                  properties={'show_in_gui': False}),
-        Integer.named('y').using(default=None, optional=True,
+        Integer.named('y').using(default=SCREEN_TOP, optional=True,
                                  properties={'show_in_gui': False}),
-        Integer.named('width').using(default=400, optional=True,
+        Integer.named('width').using(default=.5 * SCREEN_WIDTH,
+                                     optional=True,
                                      properties={'show_in_gui': False}),
-        Integer.named('height').using(default=500, optional=True,
+        Integer.named('height').using(default=SCREEN_HEIGHT - 1.5 *
+                                      TITLEBAR_HEIGHT, optional=True,
                                       properties={'show_in_gui': False}))
 
     StepFields = Form.of(Boolean.named('video_enabled')
@@ -109,9 +120,16 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
             generate items in the device UI context menu.
         '''
         py_exe = sys.executable
+
         # Set allocation based on saved app values (i.e., remember window size
         # and position from last run).
         app_values = self.get_app_values()
+        if os.environ.get('MICRODROP_FIRST_RUN'):
+            # Use default options for window allocation.
+            default_app_values = self.get_default_app_options()
+            for k in ('x', 'y', 'width', 'height'):
+                app_values[k] = default_app_values[k]
+
         allocation_args = ['-a', json.dumps(app_values)]
 
         app = get_app()
