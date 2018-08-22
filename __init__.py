@@ -11,7 +11,8 @@ from microdrop.plugin_helpers import (AppDataController, StepOptionsController,
                                       get_plugin_info, hub_execute)
 from microdrop.plugin_manager import (IPlugin, Plugin, PluginGlobals,
                                       ScheduleRequest, emit_signal, implements)
-from microdrop.app_context import get_app, get_hub_uri
+from microdrop.app_context import (get_app, get_hub_uri, SCREEN_WIDTH,
+                                   SCREEN_HEIGHT, SCREEN_TOP, TITLEBAR_HEIGHT)
 from path_helpers import path
 from pygtkhelpers.gthreads import gtk_threadsafe
 from pygtkhelpers.utils import refresh_gui
@@ -57,9 +58,14 @@ def kill_process_tree(pid, including_parent=True):
         parent.wait(5)
 
 
+
 class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
     """
     This class is automatically registered with the PluginManager.
+
+    .. versionchanged:: X.X.X
+        Set default window size and position according to **screen size** *and*
+        **window titlebar size**.
     """
     implements(IPlugin)
     version = get_plugin_info(path(__file__).parent).version
@@ -76,13 +82,16 @@ class DmfDeviceUiPlugin(AppDataController, StepOptionsController, Plugin):
                                                          False}),
         String.named('frame_corners').using(default='', optional=True,
                                             properties={'show_in_gui': False}),
-        Integer.named('x').using(default=None, optional=True,
+        Integer.named('x').using(default=.5 * SCREEN_WIDTH,
+                                 optional=True,
                                  properties={'show_in_gui': False}),
-        Integer.named('y').using(default=None, optional=True,
+        Integer.named('y').using(default=SCREEN_TOP, optional=True,
                                  properties={'show_in_gui': False}),
-        Integer.named('width').using(default=400, optional=True,
+        Integer.named('width').using(default=.5 * SCREEN_WIDTH,
+                                     optional=True,
                                      properties={'show_in_gui': False}),
-        Integer.named('height').using(default=500, optional=True,
+        Integer.named('height').using(default=SCREEN_HEIGHT - 1.5 *
+                                      TITLEBAR_HEIGHT, optional=True,
                                       properties={'show_in_gui': False}))
 
     StepFields = Form.of(Boolean.named('video_enabled')
