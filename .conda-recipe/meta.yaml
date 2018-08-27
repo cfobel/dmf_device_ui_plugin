@@ -28,7 +28,9 @@ requirements:
     #:     Draw dynamic actuation states.
     #: ..versionchanged:: 2.9
     #:     Dynamically generate context menu from registered commands.
-    - dmf-device-ui >=0.13
+    #: .. versionchanged:: 2.11
+    #:     Add keyboard shortcuts for directional control (e.g., up, down).
+    - dmf-device-ui >=0.14
     #: ..versionchanged:: 2.3.4
     #: ..versionchanged:: 2.4.1
     #: ..versionchanged:: 2.7.1
@@ -36,7 +38,10 @@ requirements:
     #:     thread).
     #: ..versionchanged:: 2.10
     #:     Set main window default geometry to fill left-hand side of screen.
-    - microdrop >=2.26
+    #: .. versionchanged:: 2.11
+    #:     Add `set_electrode_direction_states()` to electrode controller
+    #:     ZeroMQ API.
+    - microdrop >=2.28
     - microdrop-plugin-manager >=0.17
     - pandas
     - path_helpers >=0.2.post3
@@ -56,7 +61,9 @@ requirements:
     #:     Draw dynamic actuation states.
     #: ..versionchanged:: 2.9
     #:     Dynamically generate context menu from registered commands.
-    - dmf-device-ui >=0.13
+    #: .. versionchanged:: 2.11
+    #:     Add keyboard shortcuts for directional control (e.g., up, down).
+    - dmf-device-ui >=0.14
     #: ..versionchanged:: 2.3.4
     #: ..versionchanged:: 2.4.1
     #: ..versionchanged:: 2.7.1
@@ -64,7 +71,10 @@ requirements:
     #:     thread).
     #: ..versionchanged:: 2.10
     #:     Set main window default geometry to fill left-hand side of screen.
-    - microdrop >=2.26
+    #: .. versionchanged:: 2.11
+    #:     Add `set_electrode_direction_states()` to electrode controller
+    #:     ZeroMQ API.
+    - microdrop >=2.28
     - microdrop-plugin-manager >=0.17
     - pandas
     #: ..versionadded:: 2.3.1
